@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="apple-mobile-web-app-capable" content="yes"> <meta name="mobile-web-app-capable" content="yes">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Caiman Bank - Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #f8f9fa; --text: #1a1f2e; --card-shadow: 0 8px 30px rgba(16,24,40,0.18); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    header { background: white; border-bottom: 1px solid #e8ecef; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .logo { display: flex; align-items: center; gap: 1rem; }
+    .logo-circle { width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:white;font-weight:700; }
+    main { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+
+    .balance-card {
+      background: linear-gradient(135deg,#3b82f6,#2563eb);
+      border-radius: 1rem;
+      color: white;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      position: relative;
+      min-height: 175px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .balance-inner { flex: 1; }
+    .balance-label { opacity:.9;font-size:.9rem; }
+    .balance-amount { display:flex;align-items:center;gap:1rem;margin-bottom:.5rem; }
+    .balance-amount h2 { font-size:2.2rem;color:white;margin:0; }
+    .toggle-btn { background:rgba(255,255,255,.18);border:none;border-radius:8px;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center; }
+    .toggle-btn:hover { background:rgba(255,255,255,.26); }
+    .card-details p { margin:.4rem 0 0;opacity:.95;font-size:.9rem; }
+
+    .vip-card {
+      width: 275px;
+      min-width: 275px;
+      height: 162px;
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: var(--card-shadow);
+      background: linear-gradient(135deg,#d4af37,#ffd86b);
+      color: #102030;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.18);
+      margin-left: 2rem;
+    }
+    .chip { width:44px;height:32px;border-radius:6px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.6)); }
+    .top-row { display:flex;justify-content:space-between;align-items:center;gap:10px; }
+    .brand { font-style:italic;font-weight:700;font-size:1rem; }
+    .vip-label { font-weight:700;font-size:.85rem;background:rgba(255,255,255,.12);padding:5px 8px;border-radius:8px;text-align:center; }
+    .card-number { font-family:"Courier New",monospace;font-size:1rem;letter-spacing:2px;text-align:center;margin-top:4px; }
+    .meta { display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.78rem; }
+    .holder { font-weight:700;text-transform:uppercase;font-size:.82rem;letter-spacing:.5px; }
+    .subtle { font-size:.72rem;opacity:.95; }
+    .visa-mark { font-style:italic;font-weight:700;font-size:.82rem;background:rgba(0,0,0,.06);padding:5px 7px;border-radius:6px; }
+
+    .quick-actions { display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2.2rem; }
+    .action-btn { background:white;border:1px solid #e8ecef;border-radius:.75rem;padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem; }
+    .action-icon { width:24px;height:24px;stroke:#3b82f6; }
+
+    .transactions-card { background:white;border:1px solid #e8ecef;border-radius:1rem;padding:1.5rem; }
+    .transactions-card h3 { margin-bottom:1rem; }
+    .transaction-item { display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-bottom:1px solid #e8ecef; }
+    .transaction-item:last-child { border-bottom:none; }
+    .transaction-info h4 { margin:0;font-size:1rem; }
+    .transaction-info p { margin:0;font-size:.8rem;color:#6b7280; }
+    .transaction-amount { color:#22c55e;font-weight:bold; }
+    .transaction-icon { width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center;color:#22c55e;margin-right:1rem; }
+    .transaction-left { display:flex;align-items:center; }
+
+    .spinner {
+      width: 58px;
+      height: 58px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    .spinner-label {
+      margin-top: 22px;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      opacity: 0.9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-weight: 600;
+    }
+
+    @media(max-width:680px){
+      .balance-card { flex-direction: column; align-items: flex-start; min-height: auto; }
+      .vip-card { width: 100%; min-width: unset; margin-left: 0; margin-top: 1.5rem; height: auto; }
+      .quick-actions { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PANTALLA NEGRA CON LETRAS ALEATORIAS -->
+<div id="black-screen" style="position:fixed;inset:0;background:black;color:lime;font-family:monospace;font-size:1.2rem;display:flex;align-items:center;justify-content:center;z-index:9999;text-align:center;"></div>
+
+<!-- PANTALLA DE CARGA (barra de progreso) -->
+<div id="loading-screen" style="position:fixed;inset:0;background:#2563eb;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;color:white;">
+  <div style="width:80%;height:8px;background:rgba(255,255,255,.3);border-radius:4px;overflow:hidden;margin-top:20px;">
+    <div id="progress" style="width:0;height:100%;background:#1e40af;transition:width .05s linear;"></div>
+  </div>
+  <div id="welcome-text" style="font-size:1.5rem;letter-spacing:1px;font-weight:600;margin-top:30px;min-height:2rem;text-align:center;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"></div>
+</div>
+
+<!-- PANTALLA DE CÓDIGO -->
+<div id="code-screen" style="position:fixed;inset:0;background:black;color:lime;font-family:monospace;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:9999;">
+  <h2 style="margin-bottom:20px;">ENTER ACCESS CODE</h2>
+  <input id="codeInput" type="password" inputmode="numeric" maxlength="4" style="background:black;border:1px solid lime;color:lime;font-size:2rem;text-align:center;width:140px;padding:10px;letter-spacing:10px;outline:none;" />
+  <div id="codeResult" style="margin-top:20px;font-size:1.2rem;"></div>
+</div>
+
+<!-- PANTALLA SPINNER (fondo azul igual que loading) -->
+<div id="spinner-screen" style="position:fixed;inset:0;background:#2563eb;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;color:white;">
+  <div class="spinner"></div>
+  <div class="spinner-label">VERIFYING ACCESS...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="app" style="display:none;">
+  <header>
+    <div class="logo">
+      <div class="logo-circle">C</div>
+      <div>
+        <h1 style="margin:0;font-size:1.05rem;">Caiman Na. Bank</h1>
+        <p style="margin:0;font-size:.9rem;opacity:.9;">Hi Christopher!</p>
+      </div>
+    </div>
+    <button style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;">☰</button>
+  </header>
+
+  <main>
+    <!-- Balance Card -->
+    <div class="balance-card">
+      <div class="balance-inner">
+        <p class="balance-label">Total Balance</p>
+        <div class="balance-amount">
+          <h2 id="balanceDisplay">£16,432,168.66</h2>
+          <button class="toggle-btn" onclick="toggleBalance()">
+            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="card-details">
+          <p>Account: •••• 5711</p>
+          <p>Valid Thru: 12/28</p>
+        </div>
+      </div>
+
+      <!-- Tarjeta VIP dorada -->
+      <div class="vip-card">
+        <div class="top-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="chip"></div>
+            <div class="brand">Visa Credit</div>
+          </div>
+          <div class="vip-label">VIP Member</div>
+        </div>
+        <div>
+          <div class="card-number">4929 3100 7245 8672</div>
+          <div class="meta">
+            <div><div class="subtle">VALID THRU</div><div style="font-weight:700;">12/28</div></div>
+            <div style="text-align:right;"><div class="subtle">CVV</div><div style="font-weight:700;">018</div></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div class="holder">Christopher Ottano</div>
+            <div style="font-size:.72rem;opacity:.9;margin-top:3px;">Member since 2025</div>
+          </div>
+          <div class="visa-mark">VISA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span>Transfer</span>
+      </button>
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Deposit</span>
+      </button>
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span>Regina</span>
+      </button>
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        <span>More</span>
+      </button>
+    </div>
+
+    <!-- Transactions -->
+    <div class="transactions-card">
+      <h3>Recent Transactions</h3>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate</h4><p>15 Jan, 2025</p></div></div><div class="transaction-amount">+£8,420,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate V2</h4><p>7 Nov, 2024</p></div></div><div class="transaction-amount">+£700,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>7 Oct, 2025</p></div></div><div class="transaction-amount">+£1,255,011.29</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>18 Sept, 2025</p></div></div><div class="transaction-amount">+£2,507,300</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>4 Aug, 2025</p></div></div><div class="transaction-amount">+£2,507,300</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>18 Jul, 2025</p></div></div><div class="transaction-amount">+£300,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>21 May, 2025</p></div></div><div class="transaction-amount">+£741,827.37</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+  function randomChar() {
+    return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.charAt(Math.floor(Math.random() * 36));
+  }
+
+  // 1. Letras aleatorias en negro
+  const blackScreen = document.getElementById('black-screen');
+  let iteration = 0;
+  const blackInterval = setInterval(() => {
+    let txt = '';
+    for (let i = 0; i < 100; i++) txt += randomChar();
+    blackScreen.textContent = txt;
+    if (++iteration > 20) {
+      clearInterval(blackInterval);
+      blackScreen.style.display = 'none';
+      startLoading();
+    }
+  }, 50);
+
+  // 2. Barra de progreso + texto animado
+  function startLoading() {
+    const loadingScreen = document.getElementById('loading-screen');
+    const progressBar = document.getElementById('progress');
+    const welcomeText = document.getElementById('welcome-text');
+    loadingScreen.style.display = 'flex';
+    let width = 0;
+    const target = 'WELCOME TO CAIMAN BANK';
+    let displayed = Array(target.length).fill(' ');
+    const iv = setInterval(() => {
+      width += 1;
+      progressBar.style.width = width + '%';
+      for (let i = 0; i < target.length; i++) {
+        displayed[i] = displayed[i] !== target[i]
+          ? (Math.random() < width / 100 ? target[i] : randomChar())
+          : target[i];
+      }
+      welcomeText.textContent = displayed.join('');
+      if (width >= 100) {
+        clearInterval(iv);
+        loadingScreen.style.display = 'none';
+        const codeScreen = document.getElementById('code-screen');
+        codeScreen.style.display = 'flex';
+        document.getElementById('codeInput').focus();
+      }
+    }, 92.7);
+  }
+
+  // 3. Código de acceso
+  const codeInput = document.getElementById('codeInput');
+  const codeResult = document.getElementById('codeResult');
+  codeInput.addEventListener('input', () => {
+    const value = codeInput.value.replace(/\D/g, '');
+    codeInput.value = value;
+    if (value.length === 4) {
+      if (value === '1825') {
+        codeResult.textContent = '[ ACCESS GRANTED ]';
+        codeResult.style.color = 'lime';
+        setTimeout(() => {
+          document.getElementById('code-screen').style.display = 'none';
+          showSpinner();
+        }, 800);
+      } else {
+        codeResult.textContent = '[ ACCESS DENIED ]';
+        codeResult.style.color = 'red';
+        setTimeout(() => { codeResult.textContent = ''; codeInput.value = ''; }, 800);
+      }
+    }
+  });
+
+  // 4. Spinner 3–7 segundos, fondo azul
+  function showSpinner() {
+    const spinnerScreen = document.getElementById('spinner-screen');
+    spinnerScreen.style.display = 'flex';
+    const delay = 3000 + Math.random() * 4000;
+    setTimeout(() => {
+      spinnerScreen.style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    }, delay);
+  }
+
+  // 5. Toggle balance
+  let balanceVisible = true;
+  function toggleBalance() {
+    const d = document.getElementById('balanceDisplay');
+    const e = document.getElementById('eyeIcon');
+    balanceVisible = !balanceVisible;
+    d.textContent = balanceVisible ? '£16,432,168.66' : '3NCR1P73D';
+    e.innerHTML = balanceVisible
+      ? '<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>'
+      : '<path d="M17.94 17.94A10.003 10.003 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.953 9.953 0 012.121-3.362M6.1 6.1A9.969 9.969 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-4.132 5.411M1 1l22 22"/>';
+  }
+</script>
+</body>
+</html>
