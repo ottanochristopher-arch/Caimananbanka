@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Caiman Bank - Dashboard</title>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --bg: #f8f9fa; --text: #1a1f2e; --card-shadow: 0 8px 30px rgba(16,24,40,0.18); }
+    :root { --bg: #f8f9fa; --text: #1a1f2e; --card-shadow: 0 8px 30px rgba(16,24,40,0.18); --blue: #2563eb; --blue-light: #3b82f6; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--bg); color: var(--text); }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 1.2s ease forwards; }
 
     header { background: white; border-bottom: 1px solid #e8ecef; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
     .logo { display: flex; align-items: center; gap: 1rem; }
@@ -32,9 +35,729 @@
     .balance-label { opacity:.9;font-size:.9rem; }
     .balance-amount { display:flex;align-items:center;gap:1rem;margin-bottom:.5rem; }
     .balance-amount h2 { font-size:2.2rem;color:white;margin:0; }
-    .toggle-btn { background:rgba(255,255,255,.18);border:none;border-radius:8px;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center; }
+    .toggle-btn { background:rgba(255,255,255,.18);border:none;border-radius:8px;cursor:pointer;padding:6px;display:flex;align-items:center;justify-content:center;color:white; }
     .toggle-btn:hover { background:rgba(255,255,255,.26); }
     .card-details p { margin:.4rem 0 0;opacity:.95;font-size:.9rem; }
+
+    .vip-card {
+      width: 275px;
+      min-width: 275px;
+      height: 162px;
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: var(--card-shadow);
+      background: linear-gradient(135deg,#d4af37,#ffd86b);
+      color: #102030;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.18);
+      margin-left: 2rem;
+    }
+    .chip { width:44px;height:32px;border-radius:6px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.6)); }
+    .top-row { display:flex;justify-content:space-between;align-items:center;gap:10px; }
+    .brand { font-style:italic;font-weight:700;font-size:1rem; }
+    .vip-label { font-weight:700;font-size:.85rem;background:rgba(255,255,255,.12);padding:5px 8px;border-radius:8px;text-align:center; }
+    .card-number { font-family:"Courier New",monospace;font-size:1rem;letter-spacing:2px;text-align:center;margin-top:4px; }
+    .meta { display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.78rem; }
+    .holder { font-weight:700;text-transform:uppercase;font-size:.82rem;letter-spacing:.5px; }
+    .subtle { font-size:.72rem;opacity:.95; }
+    .visa-mark { font-style:italic;font-weight:700;font-size:.82rem;background:rgba(0,0,0,.06);padding:5px 7px;border-radius:6px; }
+
+    .quick-actions { display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2.2rem; }
+    .action-btn { background:white;border:1px solid #e8ecef;border-radius:.75rem;padding:1.5rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;transition:box-shadow .15s; }
+    .action-btn:hover { box-shadow: 0 4px 16px rgba(37,99,235,.13); }
+    .action-icon { width:24px;height:24px;stroke:#3b82f6; }
+
+    .transactions-card { background:white;border:1px solid #e8ecef;border-radius:1rem;padding:1.5rem; }
+    .transactions-card h3 { margin-bottom:1rem; }
+    .transaction-item { display:flex;justify-content:space-between;align-items:center;padding:1rem 0;border-bottom:1px solid #e8ecef; }
+    .transaction-item:last-child { border-bottom:none; }
+    .transaction-info h4 { margin:0;font-size:1rem; }
+    .transaction-info p { margin:0;font-size:.8rem;color:#6b7280; }
+    .transaction-amount { color:#22c55e;font-weight:bold; }
+    .transaction-icon { width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center;color:#22c55e;margin-right:1rem; }
+    .transaction-icon.expense { background:rgba(239,68,68,.1); color:#ef4444; }
+    .transaction-amount.negative { color: #ef4444; }
+    .transaction-left { display:flex;align-items:center; }
+
+    .spinner {
+      width: 58px; height: 58px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    .spinner-label { margin-top:22px;font-size:1rem;letter-spacing:1.5px;opacity:.9;font-weight:600; }
+
+    /* ===== MODAL EXTRACTOS ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 5000; opacity: 0; pointer-events: none;
+      transition: opacity .25s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: white; border-radius: 1.25rem;
+      padding: 2rem; width: 92%; max-width: 580px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+      transform: translateY(20px);
+      transition: transform .25s ease;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem; }
+    .modal-header h2 { font-size:1.2rem;color:#1a1f2e; }
+    .modal-close { background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;padding:4px; }
+    .modal-close:hover { color:#1a1f2e; }
+
+    .form-group { margin-bottom:1.2rem; }
+    .form-group label { display:block;font-size:.85rem;font-weight:600;color:#374151;margin-bottom:.4rem; }
+    .form-group input, .form-group select {
+      width:100%;padding:.65rem .9rem;border:1.5px solid #e5e7eb;border-radius:.6rem;
+      font-size:.95rem;outline:none;transition:border-color .15s;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { border-color:#3b82f6; }
+
+    .date-row { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+
+    .btn-primary {
+      width:100%;padding:.85rem;background:linear-gradient(135deg,#3b82f6,#2563eb);
+      color:white;border:none;border-radius:.75rem;font-size:1rem;font-weight:600;
+      cursor:pointer;transition:opacity .15s;margin-top:.5rem;
+    }
+    .btn-primary:hover { opacity:.9; }
+    .btn-secondary {
+      width:100%;padding:.75rem;background:#f3f4f6;
+      color:#374151;border:1.5px solid #e5e7eb;border-radius:.75rem;font-size:.95rem;font-weight:500;
+      cursor:pointer;transition:background .15s;margin-top:.5rem;
+    }
+    .btn-secondary:hover { background:#e5e7eb; }
+
+    .preview-section { margin-top:1.5rem;border-top:1.5px solid #e5e7eb;padding-top:1.2rem; }
+    .preview-section h4 { font-size:.9rem;color:#6b7280;margin-bottom:.8rem;text-transform:uppercase;letter-spacing:.5px; }
+    .preview-item { display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid #f3f4f6;font-size:.9rem; }
+    .preview-item:last-child { border-bottom:none; }
+    .preview-item .pi-name { color:#1a1f2e;font-weight:500; }
+    .preview-item .pi-date { color:#6b7280;font-size:.82rem; }
+    .preview-item .pi-amount { font-weight:600; }
+    .pi-income { color:#22c55e; }
+    .pi-expense { color:#ef4444; }
+
+    .summary-box { background:#f8f9fa;border-radius:.75rem;padding:1rem 1.2rem;margin-bottom:1rem; }
+    .summary-row { display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.35rem; }
+    .summary-row:last-child { margin-bottom:0;border-top:1.5px solid #e5e7eb;padding-top:.5rem;margin-top:.35rem;font-weight:700; }
+
+    .beneficiary-row { display:flex;align-items:center;gap:.6rem;margin-top:.3rem; }
+    .beneficiary-edit { background:none;border:none;cursor:pointer;color:#3b82f6;padding:4px;display:flex;align-items:center; }
+    .beneficiary-edit:hover { color:#1d4ed8; }
+    .beneficiary-input-wrap { display:none;margin-top:.4rem; }
+    .beneficiary-input-wrap input {
+      padding:.4rem .7rem;border:1.5px solid #3b82f6;border-radius:.5rem;
+      font-size:.9rem;font-family:inherit;outline:none;width:220px;
+    }
+    .beneficiary-save { background:#3b82f6;color:white;border:none;border-radius:.5rem;padding:.4rem .8rem;cursor:pointer;font-size:.85rem;margin-left:.4rem; }
+
+    @media(max-width:680px){
+      .balance-card { flex-direction: column; align-items: flex-start; min-height: auto; }
+      .vip-card { width: 100%; min-width: unset; margin-left: 0; margin-top: 1.5rem; height: auto; }
+      .quick-actions { grid-template-columns: repeat(2,1fr); }
+      .date-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PANTALLA NEGRA -->
+<div id="black-screen" style="position:fixed;inset:0;background:black;color:lime;font-family:monospace;font-size:1.2rem;display:flex;align-items:center;justify-content:center;z-index:9999;text-align:center;"></div>
+
+<!-- PANTALLA DE CARGA -->
+<div id="loading-screen" style="position:fixed;inset:0;background:#2563eb;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;color:white;">
+  <div style="width:80%;height:8px;background:rgba(255,255,255,.3);border-radius:4px;overflow:hidden;margin-top:20px;">
+    <div id="progress" style="width:0;height:100%;background:#1e40af;transition:width .05s linear;"></div>
+  </div>
+  <div id="welcome-text" style="font-size:1.5rem;letter-spacing:1px;font-weight:600;margin-top:30px;min-height:2rem;text-align:center;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;"></div>
+</div>
+
+<!-- PANTALLA DE CÓDIGO -->
+<div id="code-screen" style="position:fixed;inset:0;background:black;color:lime;font-family:monospace;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:9999;">
+  <h2 style="margin-bottom:20px;">ENTER ACCESS CODE</h2>
+  <input id="codeInput" type="password" inputmode="numeric" maxlength="4" style="background:black;border:1px solid lime;color:lime;font-size:2rem;text-align:center;width:140px;padding:10px;letter-spacing:10px;outline:none;" />
+  <div id="codeResult" style="margin-top:20px;font-size:1.2rem;"></div>
+</div>
+
+<!-- SPINNER -->
+<div id="spinner-screen" style="position:fixed;inset:0;background:#2563eb;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;color:white;">
+  <div class="spinner"></div>
+  <div class="spinner-label">VERIFYING ACCESS...</div>
+</div>
+
+<!-- OVERLAY BLANCO -->
+<div id="white-overlay" style="position:fixed;inset:0;background:white;z-index:9997;display:none;pointer-events:none;transition:opacity 1.4s ease;"></div>
+
+<!-- ===== MODAL EXTRACTOS BANCARIOS ===== -->
+<div class="modal-overlay" id="extractosModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📄 Extractos Bancarios</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Beneficiario editable -->
+    <div class="form-group">
+      <label>Titular / Beneficiario</label>
+      <div class="beneficiary-row">
+        <span id="beneficiaryDisplay" style="font-size:.95rem;font-weight:600;color:#1a1f2e;">Christopher Ottano</span>
+        <button class="beneficiary-edit" onclick="toggleBeneficiaryEdit()" title="Editar nombre">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </div>
+      <div class="beneficiary-input-wrap" id="beneficiaryInputWrap">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.4rem;">
+          <input type="text" id="beneficiaryInput" placeholder="Nuevo nombre del titular" />
+          <button class="beneficiary-save" onclick="saveBeneficiary()">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rango temporal -->
+    <div class="form-group">
+      <label>Rango temporal</label>
+      <select id="rangePreset" onchange="applyPreset()">
+        <option value="custom">Personalizado</option>
+        <option value="this_month">Este mes</option>
+        <option value="last_month">Mes anterior</option>
+        <option value="last_3">Últimos 3 meses</option>
+        <option value="last_6">Últimos 6 meses</option>
+        <option value="this_year">Este año (2026)</option>
+        <option value="last_year">Año 2025</option>
+        <option value="all">Todos los movimientos</option>
+      </select>
+    </div>
+
+    <div class="date-row form-group">
+      <div>
+        <label>Desde</label>
+        <input type="date" id="dateFrom" onchange="updatePreview()" />
+      </div>
+      <div>
+        <label>Hasta</label>
+        <input type="date" id="dateTo" onchange="updatePreview()" />
+      </div>
+    </div>
+
+    <!-- Preview resumen -->
+    <div class="preview-section" id="previewSection">
+      <h4>Resumen del período</h4>
+      <div class="summary-box" id="summaryBox">
+        <div class="summary-row"><span style="color:#22c55e;">▲ Total Ingresos</span><span id="sumIncome" style="color:#22c55e;font-weight:600;">—</span></div>
+        <div class="summary-row"><span style="color:#ef4444;">▼ Total Gastos</span><span id="sumExpense" style="color:#ef4444;font-weight:600;">—</span></div>
+        <div class="summary-row"><span>Saldo neto período</span><span id="sumNet">—</span></div>
+      </div>
+
+      <h4 style="margin-top:1rem;">Movimientos (<span id="txCount">0</span>)</h4>
+      <div id="previewList" style="max-height:220px;overflow-y:auto;"></div>
+    </div>
+
+    <button class="btn-primary" onclick="generatePDF()">⬇ Descargar Extracto PDF</button>
+    <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="app" style="display:none;">
+  <header>
+    <div class="logo">
+      <div class="logo-circle">C</div>
+      <div>
+        <h1 style="margin:0;font-size:1.05rem;">Caiman Na. Bank</h1>
+        <p style="margin:0;font-size:.9rem;opacity:.9;">Hi <span id="headerName">Christopher</span>!</p>
+      </div>
+    </div>
+    <button style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;">☰</button>
+  </header>
+
+  <main>
+    <!-- Balance Card -->
+    <div class="balance-card">
+      <div class="balance-inner">
+        <p class="balance-label">Total Balance</p>
+        <div class="balance-amount">
+          <h2 id="balanceDisplay">********</h2>
+          <button class="toggle-btn" onclick="toggleBalance()">
+            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24">
+              <path d="M17.94 17.94A10.003 10.003 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.953 9.953 0 012.121-3.362M6.1 6.1A9.969 9.969 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-4.132 5.411M1 1l22 22"/>
+            </svg>
+          </button>
+        </div>
+        <div class="card-details">
+          <p>SWIFT/BIC: CNATKYKY018</p>
+          <p>Valid Thru: 12/28</p>
+        </div>
+      </div>
+
+      <!-- Tarjeta VIP dorada -->
+      <div class="vip-card">
+        <div class="top-row">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="chip"></div>
+            <div class="brand">Visa Credit</div>
+          </div>
+          <div class="vip-label">VIP Member</div>
+        </div>
+        <div>
+          <div class="card-number">4929 3100 7245 8672</div>
+          <div class="meta">
+            <div><div class="subtle">VALID THRU</div><div style="font-weight:700;">12/28</div></div>
+            <div style="text-align:right;"><div class="subtle">CVV</div><div style="font-weight:700;">018</div></div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div class="holder" id="cardHolderName">Christopher Ottano</div>
+            <div style="font-size:.72rem;opacity:.9;margin-top:3px;">Member since 2025</div>
+          </div>
+          <div class="visa-mark">VISA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span>Transfer</span>
+      </button>
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <span>Deposit</span>
+      </button>
+      <button class="action-btn" onclick="openModal()">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Extractos</span>
+      </button>
+      <button class="action-btn">
+        <svg class="action-icon" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        <span>More</span>
+      </button>
+    </div>
+
+    <!-- Transactions -->
+    <div class="transactions-card">
+      <h3>Recent Transactions</h3>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate V2</h4><p>24 Apr, 2026</p></div></div><div class="transaction-amount">+£900,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Chrono24</h4><p>22 Apr, 2026</p></div></div><div class="transaction-amount negative">-£38,500</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Property Management</h4><p>20 Apr, 2026</p></div></div><div class="transaction-amount negative">-£12,750</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>18 Apr, 2026</p></div></div><div class="transaction-amount">+£2,750,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Maintenance &amp; Repairs</h4><p>15 Apr, 2026</p></div></div><div class="transaction-amount negative">-£7,200</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate</h4><p>9 Apr, 2026</p></div></div><div class="transaction-amount">+£4,000,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Accounting Services</h4><p>7 Apr, 2026</p></div></div><div class="transaction-amount negative">-£39,400</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Huntsman &amp; Sons</h4><p>5 Apr, 2026</p></div></div><div class="transaction-amount negative">-£18,900</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>1 Apr, 2026</p></div></div><div class="transaction-amount">+£1,850,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Consultancy Fees</h4><p>28 Mar, 2026</p></div></div><div class="transaction-amount negative">-£5,600</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate V2</h4><p>22 Mar, 2026</p></div></div><div class="transaction-amount">+£3,200,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Office &amp; Admin</h4><p>18 Mar, 2026</p></div></div><div class="transaction-amount negative">-£9,850</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Legal &amp; Advisory</h4><p>14 Mar, 2026</p></div></div><div class="transaction-amount negative">-£33,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>10 Mar, 2026</p></div></div><div class="transaction-amount">+£700,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Maintenance &amp; Repairs</h4><p>19 Oct, 2025</p></div></div><div class="transaction-amount negative">-£4,300</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>7 Oct, 2025</p></div></div><div class="transaction-amount">+£1,255,011.29</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Anderson &amp; Sheppard</h4><p>28 Sept, 2025</p></div></div><div class="transaction-amount negative">-£16,400</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Insurance Premium</h4><p>24 Sept, 2025</p></div></div><div class="transaction-amount negative">-£22,100</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>18 Sept, 2025</p></div></div><div class="transaction-amount">+£2,507,300</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Consultancy Fees</h4><p>14 Aug, 2025</p></div></div><div class="transaction-amount negative">-£11,750</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>4 Aug, 2025</p></div></div><div class="transaction-amount">+£2,507,300</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Accounting Services</h4><p>28 Jul, 2025</p></div></div><div class="transaction-amount negative">-£37,800</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>18 Jul, 2025</p></div></div><div class="transaction-amount">+£300,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Office &amp; Admin</h4><p>3 Jun, 2025</p></div></div><div class="transaction-amount negative">-£6,900</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Legal &amp; Advisory</h4><p>11 May, 2025</p></div></div><div class="transaction-amount negative">-£25,600</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Cot&amp;Co</h4><p>21 May, 2025</p></div></div><div class="transaction-amount">+£741,827.37</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate</h4><p>15 Jan, 2025</p></div></div><div class="transaction-amount">+£8,420,000</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon expense">↓</div><div class="transaction-info"><h4>Maintenance &amp; Repairs</h4><p>28 Dec, 2024</p></div></div><div class="transaction-amount negative">-£3,600</div></div>
+      <div class="transaction-item"><div class="transaction-left"><div class="transaction-icon">↑</div><div class="transaction-info"><h4>Real Estate V2</h4><p>7 Nov, 2024</p></div></div><div class="transaction-amount">+£700,000</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ===== DATA =====
+const ALL_TRANSACTIONS = [
+  { name:"Real Estate V2",       date:"2026-04-24", amount: 900000 },
+  { name:"Chrono24",             date:"2026-04-22", amount:-38500 },
+  { name:"Property Management",  date:"2026-04-20", amount:-12750 },
+  { name:"Cot&Co",               date:"2026-04-18", amount:2750000 },
+  { name:"Maintenance & Repairs",date:"2026-04-15", amount:-7200 },
+  { name:"Real Estate",          date:"2026-04-09", amount:4000000 },
+  { name:"Accounting Services",  date:"2026-04-07", amount:-39400 },
+  { name:"Huntsman & Sons",      date:"2026-04-05", amount:-18900 },
+  { name:"Cot&Co",               date:"2026-04-01", amount:1850000 },
+  { name:"Consultancy Fees",     date:"2026-03-28", amount:-5600 },
+  { name:"Real Estate V2",       date:"2026-03-22", amount:3200000 },
+  { name:"Office & Admin",       date:"2026-03-18", amount:-9850 },
+  { name:"Legal & Advisory",     date:"2026-03-14", amount:-33000 },
+  { name:"Cot&Co",               date:"2026-03-10", amount:700000 },
+  { name:"Maintenance & Repairs",date:"2025-10-19", amount:-4300 },
+  { name:"Cot&Co",               date:"2025-10-07", amount:1255011.29 },
+  { name:"Anderson & Sheppard",  date:"2025-09-28", amount:-16400 },
+  { name:"Insurance Premium",    date:"2025-09-24", amount:-22100 },
+  { name:"Cot&Co",               date:"2025-09-18", amount:2507300 },
+  { name:"Consultancy Fees",     date:"2025-08-14", amount:-11750 },
+  { name:"Cot&Co",               date:"2025-08-04", amount:2507300 },
+  { name:"Accounting Services",  date:"2025-07-28", amount:-37800 },
+  { name:"Cot&Co",               date:"2025-07-18", amount:300000 },
+  { name:"Office & Admin",       date:"2025-06-03", amount:-6900 },
+  { name:"Legal & Advisory",     date:"2025-05-11", amount:-25600 },
+  { name:"Cot&Co",               date:"2025-05-21", amount:741827.37 },
+  { name:"Real Estate",          date:"2025-01-15", amount:8420000 },
+  { name:"Maintenance & Repairs",date:"2024-12-28", amount:-3600 },
+  { name:"Real Estate V2",       date:"2024-11-07", amount:700000 },
+];
+
+const BALANCE = 29831438.66;
+let beneficiaryName = "Christopher Ottano";
+
+function fmt(n) {
+  return '£' + Math.abs(n).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtDate(d) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [y,m,day] = d.split('-');
+  return `${parseInt(day)} ${months[parseInt(m)-1]}, ${y}`;
+}
+
+// ===== MODAL =====
+function openModal() {
+  const modal = document.getElementById('extractosModal');
+  modal.classList.add('open');
+  // Default: all movements
+  document.getElementById('rangePreset').value = 'all';
+  applyPreset();
+}
+function closeModal() {
+  document.getElementById('extractosModal').classList.remove('open');
+}
+document.getElementById('extractosModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function applyPreset() {
+  const preset = document.getElementById('rangePreset').value;
+  const today = new Date('2026-05-29');
+  let from, to;
+  to = '2026-05-29';
+  if (preset === 'this_month') {
+    from = '2026-05-01';
+  } else if (preset === 'last_month') {
+    from = '2026-04-01'; to = '2026-04-30';
+  } else if (preset === 'last_3') {
+    from = '2026-02-28';
+  } else if (preset === 'last_6') {
+    from = '2025-11-29';
+  } else if (preset === 'this_year') {
+    from = '2026-01-01';
+  } else if (preset === 'last_year') {
+    from = '2025-01-01'; to = '2025-12-31';
+  } else if (preset === 'all') {
+    from = '2024-01-01'; to = '2026-12-31';
+  } else {
+    // custom - don't overwrite
+    updatePreview();
+    return;
+  }
+  document.getElementById('dateFrom').value = from;
+  document.getElementById('dateTo').value = to;
+  updatePreview();
+}
+
+function getFiltered() {
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+  if (!from || !to) return [];
+  return ALL_TRANSACTIONS.filter(t => t.date >= from && t.date <= to);
+}
+
+function updatePreview() {
+  const txs = getFiltered();
+  let income = 0, expense = 0;
+  txs.forEach(t => { if (t.amount > 0) income += t.amount; else expense += t.amount; });
+  const net = income + expense;
+
+  document.getElementById('txCount').textContent = txs.length;
+  document.getElementById('sumIncome').textContent = txs.length ? '+' + fmt(income) : '—';
+  document.getElementById('sumExpense').textContent = txs.length ? '-' + fmt(Math.abs(expense)) : '—';
+  const netEl = document.getElementById('sumNet');
+  netEl.textContent = txs.length ? (net >= 0 ? '+' : '-') + fmt(Math.abs(net)) : '—';
+  netEl.style.color = net >= 0 ? '#22c55e' : '#ef4444';
+
+  const list = document.getElementById('previewList');
+  list.innerHTML = '';
+  txs.forEach(t => {
+    const income = t.amount > 0;
+    const div = document.createElement('div');
+    div.className = 'preview-item';
+    div.innerHTML = `
+      <div>
+        <div class="pi-name">${t.name}</div>
+        <div class="pi-date">${fmtDate(t.date)}</div>
+      </div>
+      <div class="pi-amount ${income ? 'pi-income' : 'pi-expense'}">
+        ${income ? '+' : '-'}${fmt(Math.abs(t.amount))}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ===== BENEFICIARY =====
+function toggleBeneficiaryEdit() {
+  const wrap = document.getElementById('beneficiaryInputWrap');
+  const input = document.getElementById('beneficiaryInput');
+  if (wrap.style.display === 'block') {
+    wrap.style.display = 'none';
+  } else {
+    wrap.style.display = 'block';
+    input.value = beneficiaryName;
+    input.focus();
+  }
+}
+function saveBeneficiary() {
+  const val = document.getElementById('beneficiaryInput').value.trim();
+  if (!val) return;
+  beneficiaryName = val;
+  document.getElementById('beneficiaryDisplay').textContent = val;
+  document.getElementById('cardHolderName').textContent = val.toUpperCase();
+  document.getElementById('headerName').textContent = val.split(' ')[0];
+  document.getElementById('beneficiaryInputWrap').style.display = 'none';
+}
+
+// ===== PDF GENERATION via print window =====
+function generatePDF() {
+  const txs = getFiltered();
+  if (!txs.length) { alert('No hay movimientos en el rango seleccionado.'); return; }
+
+  const from = document.getElementById('dateFrom').value;
+  const to   = document.getElementById('dateTo').value;
+
+  let income = 0, expense = 0;
+  txs.forEach(t => { if (t.amount > 0) income += t.amount; else expense += t.amount; });
+  const net = income + expense;
+  const refNum = 'CNB-' + Date.now().toString().slice(-8);
+
+  const rows = txs.map((t, i) => {
+    const isInc = t.amount > 0;
+    return `<tr class="${i%2===0?'even':'odd'}">
+      <td class="td-stripe"><span class="stripe ${isInc?'inc':'exp'}"></span></td>
+      <td class="td-date">${fmtDate(t.date)}</td>
+      <td class="td-desc">${t.name}</td>
+      <td class="td-type ${isInc?'credit':'debit'}">${isInc?'CREDIT':'DEBIT'}</td>
+      <td class="td-amt ${isInc?'credit':'debit'}">${isInc?'+':'-'}${fmt(Math.abs(t.amount))}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Caiman Bank Statement</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;color:#1a1f2e;background:white;font-size:10px;}
+  @page{size:A4 portrait;margin:14mm 14mm 16mm 14mm;}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  .hdr{background:#2563eb;color:white;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-radius:6px 6px 0 0;margin-bottom:0;}
+  .hdr-left{display:flex;align-items:center;gap:12px;}
+  .hdr-circle{width:36px;height:36px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#2563eb;flex-shrink:0;}
+  .hdr-title{font-size:15px;font-weight:700;}
+  .hdr-sub{font-size:8px;opacity:.85;margin-top:2px;}
+  .hdr-right{text-align:right;font-size:8px;opacity:.9;line-height:1.7;}
+  .acct{display:grid;grid-template-columns:1fr 1fr;background:#f8f9fa;border:1px solid #e5e7eb;border-top:none;padding:10px 14px;margin-bottom:10px;}
+  .acct-block{padding:4px 6px;}
+  .acct-label{font-size:7px;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;}
+  .acct-value{font-size:10px;font-weight:700;color:#1a1f2e;}
+  .summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+  .sbox{border:1px solid #e5e7eb;border-radius:5px;padding:8px 10px;background:#f8f9fa;}
+  .sbox-label{font-size:7px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .sbox-val{font-size:11px;font-weight:700;}
+  .inc{color:#16a34a;} .exp{color:#dc2626;} .blue{color:#2563eb;}
+  .balbar{background:#2563eb;color:white;display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-radius:4px;margin-bottom:12px;font-size:9px;}
+  .balbar span:last-child{font-size:12px;font-weight:700;}
+  table{width:100%;border-collapse:collapse;}
+  thead tr{background:#2563eb;color:white;}
+  thead th{padding:6px 8px;font-size:8px;font-weight:600;text-align:left;letter-spacing:.4px;}
+  thead th:last-child{text-align:right;}
+  .even{background:#ffffff;} .odd{background:#f9fafb;}
+  td{padding:5px 8px;font-size:8.5px;vertical-align:middle;border-bottom:1px solid #f3f4f6;}
+  .td-stripe{width:5px;padding:0 0 0 2px;}
+  .stripe{display:inline-block;width:3px;height:18px;border-radius:2px;vertical-align:middle;}
+  .stripe.inc{background:#22c55e;} .stripe.exp{background:#ef4444;}
+  .td-date{color:#6b7280;width:80px;}
+  .td-desc{font-weight:600;}
+  .td-type{width:54px;font-size:7.5px;font-weight:600;}
+  .td-amt{text-align:right;font-weight:700;width:110px;}
+  .credit{color:#16a34a;} .debit{color:#dc2626;}
+  .final{margin-top:14px;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;}
+  .final-hdr{background:#f1f5f9;padding:7px 12px;font-size:9px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.4px;}
+  .final-row{display:flex;justify-content:space-between;padding:5px 12px;border-top:1px solid #f3f4f6;font-size:9px;}
+  .final-row.total{background:#f8f9fa;font-weight:700;}
+  .footer{margin-top:16px;background:#2563eb;color:white;text-align:center;padding:6px;font-size:7px;border-radius:0 0 4px 4px;}
+</style></head><body>
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-circle">C</div>
+    <div><div class="hdr-title">Caiman National Bank</div><div class="hdr-sub">BANK STATEMENT &mdash; CONFIDENTIAL &nbsp;|&nbsp; SWIFT/BIC: CNATKYKY018</div></div>
+  </div>
+  <div class="hdr-right">
+    <div>Statement Date: ${fmtDate('2026-05-29')}</div>
+    <div>Period: ${fmtDate(from)} &ndash; ${fmtDate(to)}</div>
+    <div>Ref: ${refNum}</div>
+  </div>
+</div>
+<div class="acct">
+  <div class="acct-block"><div class="acct-label">Account Holder</div><div class="acct-value">${beneficiaryName}</div></div>
+  <div class="acct-block"><div class="acct-label">SWIFT / BIC</div><div class="acct-value">CNATKYKY018</div></div>
+  <div class="acct-block"><div class="acct-label">Account Number</div><div class="acct-value">&bull;&bull;&bull;&bull; 5711</div></div>
+  <div class="acct-block"><div class="acct-label">Visa Card</div><div class="acct-value">4929 3100 7245 8672</div></div>
+</div>
+<div class="summary">
+  <div class="sbox"><div class="sbox-label">Total Income</div><div class="sbox-val inc">+${fmt(income)}</div></div>
+  <div class="sbox"><div class="sbox-label">Total Expenses</div><div class="sbox-val exp">-${fmt(Math.abs(expense))}</div></div>
+  <div class="sbox"><div class="sbox-label">Net Movement</div><div class="sbox-val ${net>=0?'inc':'exp'}">${net>=0?'+':'-'}${fmt(Math.abs(net))}</div></div>
+</div>
+<div class="balbar"><span>CURRENT ACCOUNT BALANCE</span><span>${fmt(BALANCE)}</span></div>
+<table>
+  <thead><tr><th style="width:5px;"></th><th>DATE</th><th>DESCRIPTION</th><th>TYPE</th><th style="text-align:right;">AMOUNT</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="final">
+  <div class="final-hdr">Statement Summary</div>
+  <div class="final-row"><span style="color:#6b7280;">Total Transactions</span><span style="font-weight:600;">${txs.length}</span></div>
+  <div class="final-row"><span style="color:#6b7280;">Total Credits (Income)</span><span class="inc" style="font-weight:700;">+${fmt(income)}</span></div>
+  <div class="final-row"><span style="color:#6b7280;">Total Debits (Expenses)</span><span class="exp" style="font-weight:700;">-${fmt(Math.abs(expense))}</span></div>
+  <div class="final-row"><span style="color:#6b7280;">Net Movement</span><span class="${net>=0?'inc':'exp'}" style="font-weight:700;">${net>=0?'+':'-'}${fmt(Math.abs(net))}</span></div>
+  <div class="final-row total"><span>Current Account Balance</span><span class="blue">${fmt(BALANCE)}</span></div>
+</div>
+<div class="footer">Caiman National Bank &nbsp;|&nbsp; SWIFT/BIC: CNATKYKY018 &nbsp;|&nbsp; Confidential &mdash; intended solely for the named account holder.</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Permite las ventanas emergentes en tu navegador para descargar el PDF.'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+// ===== BOOT SEQUENCE =====
+function randomChar() {
+  return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.charAt(Math.floor(Math.random() * 36));
+}
+
+const blackScreen = document.getElementById('black-screen');
+let iteration = 0;
+const blackInterval = setInterval(() => {
+  let txt = '';
+  for (let i = 0; i < 100; i++) txt += randomChar();
+  blackScreen.textContent = txt;
+  if (++iteration > 20) {
+    clearInterval(blackInterval);
+    blackScreen.style.display = 'none';
+    startLoading();
+  }
+}, 50);
+
+function startLoading() {
+  const loadingScreen = document.getElementById('loading-screen');
+  const progressBar = document.getElementById('progress');
+  const welcomeText = document.getElementById('welcome-text');
+  loadingScreen.style.display = 'flex';
+  let width = 0;
+  const target = 'WELCOME TO CAIMAN BANK';
+  let displayed = Array(target.length).fill(' ');
+  const iv = setInterval(() => {
+    width += 1;
+    progressBar.style.width = width + '%';
+    for (let i = 0; i < target.length; i++) {
+      displayed[i] = displayed[i] !== target[i]
+        ? (Math.random() < width / 100 ? target[i] : randomChar())
+        : target[i];
+    }
+    welcomeText.textContent = displayed.join('');
+    if (width >= 100) {
+      clearInterval(iv);
+      loadingScreen.style.display = 'none';
+      document.getElementById('code-screen').style.display = 'flex';
+      document.getElementById('codeInput').focus();
+    }
+  }, 92.7);
+}
+
+const codeInput = document.getElementById('codeInput');
+const codeResult = document.getElementById('codeResult');
+codeInput.addEventListener('input', () => {
+  const value = codeInput.value.replace(/\D/g, '');
+  codeInput.value = value;
+  if (value.length === 4) {
+    if (value === '1825') {
+      codeResult.textContent = '[ ACCESS GRANTED ]';
+      codeResult.style.color = 'lime';
+      setTimeout(() => {
+        document.getElementById('code-screen').style.display = 'none';
+        showSpinner();
+      }, 800);
+    } else {
+      codeResult.textContent = '[ ACCESS DENIED ]';
+      codeResult.style.color = 'red';
+      setTimeout(() => { codeResult.textContent = ''; codeInput.value = ''; }, 800);
+    }
+  }
+});
+
+function showSpinner() {
+  const spinnerScreen = document.getElementById('spinner-screen');
+  const overlay = document.getElementById('white-overlay');
+  const app = document.getElementById('app');
+  spinnerScreen.style.display = 'flex';
+  const delay = 3000 + Math.random() * 4000;
+  setTimeout(() => {
+    overlay.style.display = 'block';
+    overlay.style.opacity = '1';
+    setTimeout(() => {
+      spinnerScreen.style.display = 'none';
+      app.style.display = 'block';
+      app.classList.add('fade-in');
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.style.display = 'none'; }, 1400);
+    }, 600);
+  }, delay);
+}
+
+let balanceVisible = false;
+let animating = false;
+const actualBalance = '£29,831,438.66';
+
+function toggleBalance() {
+  if (animating) return;
+  const d = document.getElementById('balanceDisplay');
+  const e = document.getElementById('eyeIcon');
+  balanceVisible = !balanceVisible;
+  if (balanceVisible) {
+    e.innerHTML = '<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+    animating = true;
+    const target = actualBalance.split('');
+    const maxLen = target.length;
+    let current = Array(maxLen).fill('*');
+    d.textContent = current.join('');
+    const interval = 600 / maxLen;
+    let i = 0;
+    const iv = setInterval(() => {
+      current[i] = target[i]; d.textContent = current.join(''); i++;
+      if (i >= maxLen) { clearInterval(iv); animating = false; }
+    }, interval);
+  } else {
+    e.innerHTML = '<path d="M17.94 17.94A10.003 10.003 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.953 9.953 0 012.121-3.362M6.1 6.1A9.969 9.969 0 0112 5c4.478 0 8.268 2.943 9.542 7a9.97 9.97 0 01-4.132 5.411M1 1l22 22"/>';
+    d.textContent = '********';
+  }
+}
+</script>
+</body>
+</html>    .card-details p { margin:.4rem 0 0;opacity:.95;font-size:.9rem; }
 
     .vip-card {
       width: 275px;
